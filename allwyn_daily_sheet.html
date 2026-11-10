@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Allwyn Daily Close & Scrat - Ημερήσιο Ταμείο & Σκρατς</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap');
+        * { font-family: 'Ubuntu', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: #0b1120; color: #f8fafc; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] { -moz-appearance: textfield; }
+    </style>
+</head>
+<body class="min-h-screen pb-24 select-none">
+
+    <!-- TOP HEADER -->
+    <header class="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between shadow-lg">
+        <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-base shadow-inner">
+                <i class="fa-solid fa-calculator"></i>
+            </div>
+            <div>
+                <h1 class="text-sm font-extrabold text-slate-100 flex items-center gap-1.5">
+                    Allwyn Daily Sheet
+                    <span class="text-[10px] bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/20 font-bold">EXCEL SYNC</span>
+                </h1>
+                <span id="current-date-badge" class="text-[10px] text-slate-400 block font-medium"></span>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="resetDayConfirm()" class="h-8 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 border border-slate-700">
+                <i class="fa-solid fa-rotate-right text-amber-400"></i>
+                <span class="hidden sm:inline">Καθαρισμός Ημέρας</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="max-w-2xl mx-auto p-3 sm:p-4 space-y-4">
+
+        <!-- FINAL SYNC CARD (ΤΟ ΝΟΥΜΕΡΟ ΠΟΥ ΠΡΕΠΕΙ ΝΑ ΣΥΜΦΩΝΕΙ ΜΕ ΤΟ ΤΑΜΕΙΟ) -->
+        <div class="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 p-4 rounded-2xl border-2 border-amber-500/40 shadow-2xl relative overflow-hidden">
+            <div class="flex justify-between items-center text-xs text-slate-400 font-semibold mb-1">
+                <span class="flex items-center gap-1.5 text-amber-400">
+                    <i class="fa-solid fa-scale-balanced"></i> ΤΕΛΙΚΟ ΠΟΣΟ ΤΑΜΕΙΟΥ (ΒΑΡΔΙΑ)
+                </span>
+                <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full border border-slate-700">Formula: E18 + F18 + I9</span>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 mt-2">
+                <div class="flex items-baseline gap-2">
+                    <span id="display-final-tameio" class="text-4xl font-black tracking-tight text-amber-400">0.00 €</span>
+                    <span id="display-final-rounded" class="text-sm font-bold text-slate-400">(~ 0 €)</span>
+                </div>
+                <div class="text-xs bg-slate-950/80 px-3 py-2 rounded-xl border border-slate-800 space-y-1">
+                    <div class="flex justify-between gap-4 text-slate-400 text-[11px]">
+                        <span>Υποχρεώσεις (E18):</span>
+                        <b id="sub-e18" class="text-slate-200">0.00 €</b>
+                    </div>
+                    <div class="flex justify-between gap-4 text-slate-400 text-[11px]">
+                        <span>Διαθέσιμα (F18):</span>
+                        <b id="sub-f18" class="text-slate-200">0.00 €</b>
+                    </div>
+                    <div class="flex justify-between gap-4 text-slate-400 text-[11px]">
+                        <span>Πελάτες/VLT (I9):</span>
+                        <b id="sub-i9" class="text-slate-200">0.00 €</b>
+                    </div>
+                </div>
+            </div>
+            <p class="text-[10px] text-amber-300/80 mt-2 font-medium">
+                👉 Αυτό το τελικό νούμερο καταχωρείται στην άλλη εφαρμογή ως το αποτέλεσμα της ημέρας.
+            </p>
+        </div>
+
+        <!-- NAVIGATION TABS -->
+        <div class="grid grid-cols-2 gap-2 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800">
+            <button onclick="switchTab('opap')" id="tab-btn-opap" class="py-2.5 rounded-xl text-xs font-bold transition-all bg-amber-500 text-slate-950 shadow-md flex items-center justify-center gap-2">
+                <i class="fa-solid fa-store"></i> 1. Φύλλο «ΟΠΑΠ» (Βάρδια)
+            </button>
+            <button onclick="switchTab('skrats')" id="tab-btn-skrats" class="py-2.5 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-slate-200 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-ticket"></i> 2. Φύλλο «ΣΚΡΑΤΣ»
+            </button>
+        </div>
+
+        <!-- ==================== TAB 1: ΦΥΛΛΟ ΟΠΑΠ ==================== -->
+        <div id="tab-opap" class="space-y-4">
+
+            <!-- SECTION A: ΠΕΛΑΤΕΣ & VLT (ΓΡΑΜΜΕΣ 1-9 -> I9) -->
+            <div class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-users"></i> Πελάτες (Οφειλές / Πιστώσεις) & VLTs
+                        </h2>
+                        <span class="text-[10px] text-slate-400">Γραμμές 1–9 του Excel (Άθροισμα = I9)</span>
+                    </div>
+                    <span id="total-i9-badge" class="bg-amber-500/10 text-amber-300 font-bold px-2.5 py-1 rounded-lg text-xs border border-amber-500/20">
+                        I9: 0.00 €
+                    </span>
+                </div>
+
+                <div id="clients-container" class="space-y-2">
+                    <!-- Client cards rendered via JS -->
+                </div>
+
+                <div class="pt-2 flex gap-2">
+                    <button onclick="addNewClient()" class="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-user-plus text-amber-400"></i> Προσθήκη Πελάτη
+                    </button>
+                </div>
+            </div>
+
+            <!-- SECTION B: ΜΗΧΑΝΕΣ & ΤΕΡΜΑΤΙΚΑ (ΓΡΑΜΜΕΣ 11-18 -> E18) -->
+            <div class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-desktop"></i> Μηχανές / Τερματικά ΟΠΑΠ
+                        </h2>
+                        <span class="text-[10px] text-slate-400">ΚΙΝΟ, Στοίχημα, POS, Tora & Σκρατς</span>
+                    </div>
+                    <span id="total-e18-badge" class="bg-rose-500/10 text-rose-300 font-bold px-2.5 py-1 rounded-lg text-xs border border-rose-500/20">
+                        E18: 0.00 €
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <!-- KINO -->
+                    <div class="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-xs font-bold text-slate-300">ΚΙΝΟ (Στήλη A)</label>
+                            <span id="kino-sum-badge" class="text-[11px] font-bold text-rose-400">0.00 €</span>
+                        </div>
+                        <input type="text" id="kino-input" oninput="calculateAll()" placeholder="π.χ. -2086, -1800, -1442, -1494" class="w-full bg-slate-900 border border-slate-800 text-slate-100 text-xs rounded-lg px-2.5 py-2 focus:outline-none focus:border-amber-500">
+                        <span class="text-[9px] text-slate-500 block mt-1">Χωρίστε τα ποσά με κόμμα (,)</span>
+                    </div>
+
+                    <!-- ΣΤΟΙΧΗΜΑ -->
+                    <div class="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-xs font-bold text-slate-300">ΣΤΟΙΧΗΜΑ (Στήλη B)</label>
+                            <span id="stoix-sum-badge" class="text-[11px] font-bold text-rose-400">0.00 €</span>
+                        </div>
+                        <input type="text" id="stoix-input" oninput="calculateAll()" placeholder="π.χ. 41, -163, -845, 72.5" class="w-full bg-slate-900 border border-slate-800 text-slate-100 text-xs rounded-lg px-2.5 py-2 focus:outline-none focus:border-amber-500">
+                        <span class="text-[9px] text-slate-500 block mt-1">Χωρίστε τα ποσά με κόμμα (,)</span>
+                    </div>
+
+                    <!-- POS -->
+                    <div class="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-xs font-bold text-slate-300">POS (Στήλη C)</label>
+                            <span id="pos-sum-badge" class="text-[11px] font-bold text-emerald-400">0.00 €</span>
+                        </div>
+                        <input type="text" id="pos-input" oninput="calculateAll()" placeholder="π.χ. 354.75, 409.25, 289.25, 402.1" class="w-full bg-slate-900 border border-slate-800 text-slate-100 text-xs rounded-lg px-2.5 py-2 focus:outline-none focus:border-amber-500">
+                        <span class="text-[9px] text-slate-500 block mt-1">Χωρίστε τα ποσά με κόμμα (,)</span>
+                    </div>
+
+                    <!-- TORA & ΣΚΡΑΤΣ (ΣΤΗΛΗ D) -->
+                    <div class="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-xs font-bold text-slate-300">TORA + ΣΚΡΑΤΣ (Στήλη D)</label>
+                            <span id="tora-sum-badge" class="text-[11px] font-bold text-rose-400">0.00 €</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-[9px] text-slate-400">Tora Amount</label>
+                                <input type="number" step="0.01" id="tora-amount" oninput="calculateAll()" placeholder="-447.45" class="w-full bg-slate-900 border border-slate-800 text-slate-100 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-amber-500">
+                            </div>
+                            <div>
+                                <label class="text-[9px] text-amber-400 font-semibold">Σκρατς Μετρητά (E2)</label>
+                                <input type="number" id="skrats-auto-e2" readonly class="w-full bg-slate-850 border border-amber-500/30 text-amber-300 text-xs font-bold rounded-lg px-2 py-1.5">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION C: ΔΙΑΘΕΣΙΜΑ ΧΡΗΜΑΤΑ (ΓΡΑΜΜΕΣ 13-16 -> F18) -->
+            <div class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-money-bill-transfer"></i> Διαθέσιμα Χρήματα & Κινήσεις
+                        </h2>
+                        <span class="text-[10px] text-slate-400">Πληρωμή, Μετρητά, Τράπεζα (Άθροισμα = F18)</span>
+                    </div>
+                    <span id="total-f18-badge" class="bg-emerald-500/10 text-emerald-300 font-bold px-2.5 py-1 rounded-lg text-xs border border-emerald-500/20">
+                        F18: 0.00 €
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
+                        <label class="text-[10px] font-bold text-rose-400 block mb-1">ΠΛΗΡΩΜΗ</label>
+                        <input type="number" step="0.01" id="money-plirwmi" oninput="calculateAll()" placeholder="-3098" class="w-full bg-slate-900 border border-slate-800 text-slate-100 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-amber-500">
+                    </div>
+                    <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
+                        <label class="text-[10px] font-bold text-emerald-400 block mb-1">ΜΕΤΡΗΤΑ</label>
+                        <input type="number" step="0.01" id="money-metrita" oninput="calculateAll()" placeholder="3394" class="w-full bg-slate-900 border border-slate-800 text-slate-100 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-amber-500">
+                    </div>
+                    <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
+                        <label class="text-[10px] font-bold text-sky-400 block mb-1">ΤΡΑΠΕΖΑ</label>
+                        <input type="number" step="0.01" id="money-trapeza" oninput="calculateAll()" placeholder="6969" class="w-full bg-slate-900 border border-slate-800 text-slate-100 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-amber-500">
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ==================== TAB 2: ΦΥΛΛΟ ΣΚΡΑΤΣ ==================== -->
+        <div id="tab-skrats" class="space-y-4 hidden">
+
+            <!-- FRIDAY ROLLOVER ACTION BAR -->
+            <div class="bg-gradient-to-r from-purple-950/60 to-indigo-950/60 p-4 rounded-2xl border border-purple-500/30 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                    <h3 class="text-xs font-bold text-purple-300 flex items-center gap-1.5">
+                        <i class="fa-solid fa-calendar-check text-purple-400"></i> Εκκαθαριστικό Allwyn (Κάθε Παρασκευή)
+                    </h3>
+                    <p class="text-[10px] text-slate-400 mt-0.5">
+                        Μηδενισμός εβδομάδας, προσθήκη στις Προηγούμενες Εξαργυρώσεις και αλλαγή ημερομηνιών κατά +7 ημέρες.
+                    </p>
+                </div>
+                <button onclick="executeFridayRollover()" class="px-3.5 py-2.5 bg-purple-600 hover:bg-purple-500 active:scale-95 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-md shadow-purple-900/40 whitespace-nowrap transition-transform">
+                    <i class="fa-solid fa-arrows-rotate"></i> Εκκαθάριση Παρασκευής
+                </button>
+            </div>
+
+            <!-- ΣΥΝΟΨΗ ΜΕΤΡΗΤΩΝ ΣΚΡΑΤΣ (CELL E2) & BALANCE (C13) -->
+            <div class="bg-gradient-to-br from-amber-950/40 via-slate-900 to-slate-900 p-4 rounded-2xl border border-amber-500/30 shadow-xl">
+                <div class="flex justify-between items-center text-xs text-slate-400 font-semibold mb-1">
+                    <span class="text-amber-400 font-bold uppercase flex items-center gap-1.5">
+                        <i class="fa-solid fa-coins"></i> ΥΠΟΛΟΓΙΣΜΟΣ ΜΕΤΡΗΤΩΝ ΣΚΡΑΤΣ (E2)
+                    </span>
+                    <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded">Cell E2</span>
+                </div>
+                <div class="mt-2 flex flex-col sm:flex-row sm:items-baseline justify-between gap-3">
+                    <div>
+                        <span id="skrats-e2-display" class="text-3xl font-extrabold text-amber-400">3085.00 €</span>
+                        <p class="text-[10px] text-slate-400 mt-0.5">
+                            = ΣΥΝΟΛΑ (7902) - ΠΡΟΗΓ. ΕΞΑΡΓ. (F2) - ΤΡΕΧΟΥΣΕΣ (B28) - ΣΤΟΚ (E29)
+                        </p>
+                    </div>
+                    <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 text-[11px] text-slate-300 space-y-1">
+                        <div class="flex justify-between gap-4">
+                            <span>Αρχικό Κεφάλαιο (G2):</span>
+                            <b>7902.00 €</b>
+                        </div>
+                        <div class="flex justify-between gap-4">
+                            <span class="text-purple-300 font-medium">Προηγ. Εξαργυρώσεις (F2):</span>
+                            <b id="lbl-skrats-f2" class="text-purple-400">868.00 €</b>
+                        </div>
+                        <div class="flex justify-between gap-4">
+                            <span class="text-rose-300 font-medium">Τρέχουσες Εξαργ. (B28):</span>
+                            <b id="lbl-skrats-b28" class="text-rose-400">0.00 €</b>
+                        </div>
+                        <div class="flex justify-between gap-4">
+                            <span>Στοκ Σκρατς (E29):</span>
+                            <b id="lbl-skrats-e29" class="text-sky-400">3949.00 €</b>
+                        </div>
+                        <div class="flex justify-between gap-4 pt-1 border-t border-slate-800 text-amber-300 font-bold">
+                            <span>BALANCE (C13):</span>
+                            <span id="lbl-skrats-c13">7034.00 €</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ΠΛΑΙΣΙΟ ΠΡΟΗΓΟΥΜΕΝΩΝ ΕΞΑΡΓΥΡΩΣΕΩΝ (CELL F2) -->
+            <div class="bg-slate-900/90 p-3.5 rounded-2xl border border-purple-500/30 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center text-base border border-purple-500/20">
+                        <i class="fa-solid fa-vault"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs font-bold text-slate-200 block">Συνολικό Πλαίσιο Εξαργυρώσεων (Κελί F2)</span>
+                        <span class="text-[10px] text-slate-400">Κρατάει το ιστορικό σύνολο ώστε να μην χαλάει ο ισολογισμός</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="number" step="0.01" id="f2-accumulated-input" onchange="updateF2Directly(this.value)" class="w-24 bg-slate-950 border border-purple-500/40 text-purple-300 font-bold text-xs rounded-lg px-2.5 py-1.5 text-right focus:outline-none focus:border-purple-400">
+                    <span class="text-xs text-slate-400">€</span>
+                </div>
+            </div>
+
+            <!-- SECTION A: ΕΞΑΡΓΥΡΩΣΕΙΣ ΕΒΔΟΜΑΔΑΣ (ΣΤΗΛΗ B, ΓΡΑΜΜΕΣ 2-10) -->
+            <div class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-money-bill-wave"></i> Εξαργυρώσεις Τρέχουσας Εβδομάδας
+                        </h2>
+                        <span class="text-[10px] text-slate-400">Καθημερινές εξαργυρώσεις (B2:B9)</span>
+                    </div>
+                    <span id="skrats-exarg-sum" class="bg-rose-500/10 text-rose-300 font-bold px-2 py-0.5 rounded text-xs">
+                        Σύνολο: 0.00 €
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2" id="exarg-inputs-grid">
+                    <!-- Dynamic inputs for B2-B9 with editable dates -->
+                </div>
+            </div>
+
+            <!-- SECTION B: ΣΤΟΚ ΣΚΡΑΤΣ ΑΝΑ ΑΞΙΑ (ΓΡΑΜΜΕΣ 12-29 -> E29) -->
+            <div class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-boxes-stacked"></i> Απογραφή Στοκ Σκρατς & Λαχείων
+                        </h2>
+                        <span class="text-[10px] text-slate-400">Αφαιρέστε μεμονωμένα σκρατς κατά την πώληση</span>
+                    </div>
+                    <span id="skrats-stock-sum" class="bg-sky-500/10 text-sky-300 font-bold px-2.5 py-1 rounded-lg text-xs">
+                        Στοκ (E29): 3949.00 €
+                    </span>
+                </div>
+
+                <div class="space-y-2" id="stock-items-container">
+                    <!-- Stock items dynamically rendered with +/- buttons -->
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // CLIENTS DATA (Γραμμές 1-9 του φύλλου ΟΠΑΠ)
+        let clientsData = JSON.parse(localStorage.getItem('allwyn_excel_clients')) || [
+            { id: "c1", name: "ΕΜΡΑΝ", values: [57.5] },
+            { id: "c2", name: "ΤΖΙΜΗΣ-ΑΚΗΣ", values: [290] },
+            { id: "c3", name: "Unnamed", values: [10, 100] },
+            { id: "c4", name: "VOUD", values: [42, 224] },
+            { id: "c5", name: "ΤΣΟΥΚ", values: [8, 27, 350] },
+            { id: "c6", name: "DESPOINA", values: [58, 260] },
+            { id: "c7", name: "VLT", values: [1206] }
+        ];
+
+        // EXARG DATES (Στήλη A & B φύλλου ΣΚΡΑΤΣ, αρχικά από 13-Νοε όπως στη νέα φωτογραφία)
+        let exargData = JSON.parse(localStorage.getItem('allwyn_excel_exarg')) || [
+            { date: "13-Νοε", dayOffset: 13, val: 0 },
+            { date: "14-Νοε", dayOffset: 14, val: 0 },
+            { date: "15-Νοε", dayOffset: 15, val: 0 },
+            { date: "16-Νοε", dayOffset: 16, val: 0 },
+            { date: "17-Νοε", dayOffset: 17, val: 0 },
+            { date: "18-Νοε", dayOffset: 18, val: 0 },
+            { date: "19-Νοε", dayOffset: 19, val: 0 },
+            { date: "20-Νοε", dayOffset: 20, val: 0 }
+        ];
+
+        // CUMULATIVE REDEMPTIONS (ΚΕΛΙ F2: 868€ όπως στη νέα φωτογραφία)
+        let accumulatedF2 = parseFloat(localStorage.getItem('allwyn_excel_f2')) || 868;
+
+        // STOCK SCRATCH DENOMINATIONS (Πίνακας D12:E29 του φύλλου ΣΚΡΑΤΣ)
+        let stockItems = JSON.parse(localStorage.getItem('allwyn_excel_stock')) || [
+            { id: "s1", label: "1 €", price: 1, totalValue: 3 },
+            { id: "s2", label: "2 €", price: 2, totalValue: 678 },
+            { id: "s3", label: "3 €", price: 3, totalValue: 213 },
+            { id: "s4", label: "5 €", price: 5, totalValue: 705 },
+            { id: "s5", label: "10 €", price: 10, totalValue: 410 },
+            { id: "s6", label: "20 €", price: 20, totalValue: 460 },
+            { id: "s7", label: "50 €", price: 50, totalValue: 500 },
+            { id: "s8", label: "10€ ΛΑΧΕΙΑ stock", price: 10, totalValue: 300 },
+            { id: "s9", label: "5€ ΛΑΧΕΙΑ", price: 5, totalValue: 480 },
+            { id: "s10", label: "10€ ΛΑΧΕΙΑ", price: 10, totalValue: 200 }
+        ];
+
+        // INITIAL VALUES FOR TERMINALS & MONEY
+        let state = JSON.parse(localStorage.getItem('allwyn_excel_state')) || {
+            kinoStr: "-2086, -1800, -1442, -1494",
+            stoixStr: "41, -163, -845, 72.5",
+            posStr: "354.75, 409.25, 289.25, 402.1",
+            toraAmount: -447.45,
+            skratsTotalG2: 7902,
+            moneyPlirwmi: -3098,
+            moneyMetrita: 3394,
+            moneyTrapeza: 6969
+        };
+
+        // INIT
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('current-date-badge').innerText = new Date().toLocaleDateString('el-GR', {
+                weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+            });
+
+            // Load saved inputs
+            document.getElementById('kino-input').value = state.kinoStr;
+            document.getElementById('stoix-input').value = state.stoixStr;
+            document.getElementById('pos-input').value = state.posStr;
+            document.getElementById('tora-amount').value = state.toraAmount;
+            document.getElementById('money-plirwmi').value = state.moneyPlirwmi;
+            document.getElementById('money-metrita').value = state.moneyMetrita;
+            document.getElementById('money-trapeza').value = state.moneyTrapeza;
+            document.getElementById('f2-accumulated-input').value = accumulatedF2;
+
+            renderClients();
+            renderExargInputs();
+            renderStockItems();
+            calculateAll();
+        });
+
+        function switchTab(tab) {
+            if (tab === 'opap') {
+                document.getElementById('tab-opap').classList.remove('hidden');
+                document.getElementById('tab-skrats').classList.add('hidden');
+                document.getElementById('tab-btn-opap').className = "py-2.5 rounded-xl text-xs font-bold transition-all bg-amber-500 text-slate-950 shadow-md flex items-center justify-center gap-2";
+                document.getElementById('tab-btn-skrats').className = "py-2.5 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-slate-200 flex items-center justify-center gap-2";
+            } else {
+                document.getElementById('tab-skrats').classList.remove('hidden');
+                document.getElementById('tab-opap').classList.add('hidden');
+                document.getElementById('tab-btn-skrats').className = "py-2.5 rounded-xl text-xs font-bold transition-all bg-amber-500 text-slate-950 shadow-md flex items-center justify-center gap-2";
+                document.getElementById('tab-btn-opap').className = "py-2.5 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-slate-200 flex items-center justify-center gap-2";
+            }
+        }
+
+        // FRIDAY ROLLOVER LOGIC
+        function executeFridayRollover() {
+            // Calculate current week's redemptions
+            const currentWeekSum = exargData.reduce((acc, cur) => acc + (parseFloat(cur.val) || 0), 0);
+            
+            const msg = `Εκκαθάριση Παρασκευής:
+
+` +
+                        `• Τρέχουσες εξαργυρώσεις εβδομάδας: ${currentWeekSum.toFixed(2)} €
+` +
+                        `• Ήδη υπάρχον πλαίσιο (F2): ${accumulatedF2.toFixed(2)} €
+` +
+                        `• Νέο σύνολο πλαισίου (F2): ${(accumulatedF2 + currentWeekSum).toFixed(2)} €
+
+` +
+                        `Οι ημερομηνίες θα μεταφερθούν αυτόματα στην επόμενη εβδομάδα (+7 ημέρες) και οι ημερήσιες εξαργυρώσεις θα μηδενιστούν.
+
+Θέλετε να συνεχίσετε;`;
+
+            if (confirm(msg)) {
+                // 1. Add current week sum to accumulated F2
+                accumulatedF2 += currentWeekSum;
+                localStorage.setItem('allwyn_excel_f2', accumulatedF2);
+                document.getElementById('f2-accumulated-input').value = accumulatedF2;
+
+                // 2. Advance dates by +7 days and reset daily amounts
+                const greekMonths = ["Ιαν", "Φεβ", "Μαρ", "Απρ", "Μαϊ", "Ιουν", "Ιουλ", "Αυγ", "Σεπ", "Οκτ", "Νοε", "Δεκ"];
+                
+                // Try parsing first item date or use sequential shift
+                exargData = exargData.map((item, i) => {
+                    // Try parsing date string like "13-Νοε"
+                    const parts = item.date.split('-');
+                    let day = parseInt(parts[0]);
+                    let mStr = parts[1] || "Νοε";
+                    
+                    // Add 7 days
+                    let newDay = day + 7;
+                    let newDateStr = `${newDay}-${mStr}`;
+                    
+                    return {
+                        date: newDateStr,
+                        dayOffset: newDay,
+                        val: 0 // Μηδενισμός
+                    };
+                });
+
+                localStorage.setItem('allwyn_excel_exarg', JSON.stringify(exargData));
+                renderExargInputs();
+                calculateAll();
+
+                alert("Η εκκαθάριση ολοκληρώθηκε με επιτυχία! Οι ημερομηνίες ενημερώθηκαν και το ταμείο παρέμεινε απόλυτα ισοσκελισμένο.");
+            }
+        }
+
+        function updateF2Directly(val) {
+            accumulatedF2 = parseFloat(val) || 0;
+            localStorage.setItem('allwyn_excel_f2', accumulatedF2);
+            calculateAll();
+        }
+
+        // RENDER CLIENTS (I9)
+        function renderClients() {
+            const container = document.getElementById('clients-container');
+            container.innerHTML = clientsData.map((c, idx) => `
+                <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2 w-1/3">
+                        <input type="text" value="${c.name}" onchange="updateClientName(${idx}, this.value)" class="bg-slate-900 border border-slate-800 text-slate-200 font-bold text-xs rounded px-2 py-1 w-full focus:outline-none focus:border-amber-500">
+                    </div>
+                    <div class="flex-1">
+                        <input type="text" value="${c.values.join(', ')}" onchange="updateClientValues(${idx}, this.value)" placeholder="π.χ. 42, 224" class="bg-slate-900 border border-slate-800 text-slate-100 text-xs rounded px-2 py-1 w-full focus:outline-none focus:border-amber-500">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-amber-400 whitespace-nowrap">${sumArray(c.values).toFixed(2)} €</span>
+                        <button onclick="removeClient(${idx})" class="w-6 h-6 rounded bg-slate-800 hover:bg-rose-900/50 text-slate-400 hover:text-rose-300 flex items-center justify-center text-[10px]">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateClientName(idx, val) {
+            clientsData[idx].name = val;
+            saveClients();
+        }
+
+        function updateClientValues(idx, str) {
+            const arr = str.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+            clientsData[idx].values = arr.length > 0 ? arr : [0];
+            saveClients();
+            renderClients();
+            calculateAll();
+        }
+
+        function addNewClient() {
+            clientsData.push({ id: "c_" + Date.now(), name: "ΝΕΟΣ ΠΕΛΑΤΗΣ", values: [0] });
+            saveClients();
+            renderClients();
+            calculateAll();
+        }
+
+        function removeClient(idx) {
+            if (confirm("Διαγραφή πελάτη;")) {
+                clientsData.splice(idx, 1);
+                saveClients();
+                renderClients();
+                calculateAll();
+            }
+        }
+
+        function saveClients() {
+            localStorage.setItem('allwyn_excel_clients', JSON.stringify(clientsData));
+        }
+
+        // RENDER EXARG INPUTS (B2:B9 & DATES)
+        function renderExargInputs() {
+            const container = document.getElementById('exarg-inputs-grid');
+            container.innerHTML = exargData.map((item, idx) => `
+                <div class="bg-slate-950 p-2 rounded-xl border border-slate-800">
+                    <input type="text" value="${item.date}" onchange="updateExargDate(${idx}, this.value)" class="text-[10px] text-slate-400 font-semibold bg-transparent border-0 focus:outline-none focus:text-amber-400 w-full mb-0.5">
+                    <input type="number" step="0.01" value="${item.val || ''}" oninput="updateExarg(${idx}, this.value)" placeholder="0.00" class="w-full bg-slate-900 border border-slate-800 text-slate-100 text-xs rounded px-2 py-1 focus:outline-none focus:border-amber-500 font-bold">
+                </div>
+            `).join('');
+        }
+
+        function updateExargDate(idx, val) {
+            exargData[idx].date = val;
+            localStorage.setItem('allwyn_excel_exarg', JSON.stringify(exargData));
+        }
+
+        function updateExarg(idx, val) {
+            exargData[idx].val = parseFloat(val) || 0;
+            localStorage.setItem('allwyn_excel_exarg', JSON.stringify(exargData));
+            calculateAll();
+        }
+
+        // RENDER STOCK ITEMS (ΣΚΡΑΤΣ D12:E29)
+        function renderStockItems() {
+            const container = document.getElementById('stock-items-container');
+            container.innerHTML = stockItems.map((s, idx) => `
+                <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-lg bg-sky-500/10 text-sky-400 font-bold text-xs flex items-center justify-center border border-sky-500/20">
+                            ${s.price}€
+                        </div>
+                        <span class="text-xs font-semibold text-slate-200">${s.label}</span>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <!-- Κουμπί Πώλησης: Αφαιρεί 1 σκρατς (μειώνει την αξία κατά s.price) -->
+                        <button onclick="sellScratch(${idx}, 1)" title="Πώληση 1 τεμαχίου" class="h-7 px-2 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 font-bold text-xs border border-rose-500/30 flex items-center gap-1 active:scale-95">
+                            <i class="fa-solid fa-minus"></i> 1 (${s.price}€)
+                        </button>
+
+                        <!-- Χειροκίνητη τιμή αξίας -->
+                        <div class="w-20">
+                            <input type="number" step="1" value="${s.totalValue}" onchange="updateStockValue(${idx}, this.value)" class="w-full bg-slate-900 border border-slate-800 text-slate-100 font-bold text-xs rounded px-2 py-1 text-right focus:outline-none focus:border-amber-500">
+                        </div>
+                        <span class="text-[10px] text-slate-400">€</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function sellScratch(idx, count) {
+            const s = stockItems[idx];
+            if (s.totalValue >= s.price * count) {
+                s.totalValue -= s.price * count;
+                saveStock();
+                renderStockItems();
+                calculateAll();
+            } else {
+                alert("Το απόθεμα είναι μικρότερο από το ποσό πώλησης!");
+            }
+        }
+
+        function updateStockValue(idx, val) {
+            stockItems[idx].totalValue = parseFloat(val) || 0;
+            saveStock();
+            calculateAll();
+        }
+
+        function saveStock() {
+            localStorage.setItem('allwyn_excel_stock', JSON.stringify(stockItems));
+        }
+
+        // PARSER HELPER
+        function parseSumString(str) {
+            if (!str) return 0;
+            const parts = str.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+            return parts.reduce((a, b) => a + b, 0);
+        }
+
+        function sumArray(arr) {
+            return (arr || []).reduce((a, b) => a + (parseFloat(b) || 0), 0);
+        }
+
+        // CORE FORMULA ENGINE (REPLICATES EXACT EXCEL SHEETS)
+        function calculateAll() {
+            // 1. ΣΚΡΑΤΣ CALCULATIONS
+            const sumB28_currentWeekExarg = exargData.reduce((acc, cur) => acc + (parseFloat(cur.val) || 0), 0);
+            const sumE29_stock = stockItems.reduce((acc, cur) => acc + (parseFloat(cur.totalValue) || 0), 0);
+            const sumG2_total = 7902; // Σταθερό σημείο αναφοράς κεφαλαίου στο φύλλο
+
+            // BALANCE (C13): 7902 - F2 (Προηγούμενες εξαργυρώσεις) = 7034.00 €
+            const balanceC13 = sumG2_total - accumulatedF2;
+
+            // E2 = G2 - F2 (Προηγούμενες Εξαργ.) - B28 (Τρέχουσες Εξαργ.) - E29 (Στοκ)
+            // = 7902 - 868 - 0 - 3949 = 3085.00 € (ακριβώς όπως στο Excel)
+            const skratsCash_E2 = sumG2_total - accumulatedF2 - sumB28_currentWeekExarg - sumE29_stock;
+
+            // Update scratch UI
+            document.getElementById('lbl-skrats-f2').innerText = `${accumulatedF2.toFixed(2)} €`;
+            document.getElementById('lbl-skrats-b28').innerText = `${sumB28_currentWeekExarg.toFixed(2)} €`;
+            document.getElementById('lbl-skrats-e29').innerText = `${sumE29_stock.toFixed(2)} €`;
+            document.getElementById('lbl-skrats-c13').innerText = `${balanceC13.toFixed(2)} €`;
+            document.getElementById('skrats-exarg-sum').innerText = `Σύνολο: ${sumB28_currentWeekExarg.toFixed(2)} €`;
+            document.getElementById('skrats-stock-sum').innerText = `Στοκ (E29): ${sumE29_stock.toFixed(2)} €`;
+            document.getElementById('skrats-e2-display').innerText = `${skratsCash_E2.toFixed(2)} €`;
+            document.getElementById('skrats-auto-e2').value = skratsCash_E2.toFixed(2);
+
+            // 2. ΟΠΑΠ SHEET: I9 (ΠΕΛΑΤΕΣ + VLT)
+            let sumI9 = 0;
+            clientsData.forEach(c => {
+                sumI9 += sumArray(c.values);
+            });
+            document.getElementById('total-i9-badge').innerText = `I9: ${sumI9.toFixed(2)} €`;
+            document.getElementById('sub-i9').innerText = `${sumI9.toFixed(2)} €`;
+
+            // 3. ΟΠΑΠ SHEET: E18 (ΜΗΧΑΝΕΣ & ΤΕΡΜΑΤΙΚΑ)
+            const kinoStr = document.getElementById('kino-input').value;
+            const stoixStr = document.getElementById('stoix-input').value;
+            const posStr = document.getElementById('pos-input').value;
+            const toraAmt = parseFloat(document.getElementById('tora-amount').value) || 0;
+
+            const sumKino = parseSumString(kinoStr);
+            const sumStoix = parseSumString(stoixStr);
+            const sumPos = parseSumString(posStr);
+            
+            // D18 = Tora Amount - ΣΚΡΑΤΣ!E2
+            const sumD18 = toraAmt - skratsCash_E2;
+
+            // E18 = KINO + ΣΤΟΙΧΗΜΑ + POS + D18
+            const sumE18 = sumKino + sumStoix + sumPos + sumD18;
+
+            document.getElementById('kino-sum-badge').innerText = `${sumKino.toFixed(2)} €`;
+            document.getElementById('stoix-sum-badge').innerText = `${sumStoix.toFixed(2)} €`;
+            document.getElementById('pos-sum-badge').innerText = `+${sumPos.toFixed(2)} €`;
+            document.getElementById('tora-sum-badge').innerText = `${sumD18.toFixed(2)} €`;
+            document.getElementById('total-e18-badge').innerText = `E18: ${sumE18.toFixed(2)} €`;
+            document.getElementById('sub-e18').innerText = `${sumE18.toFixed(2)} €`;
+
+            // 4. ΟΠΑΠ SHEET: F18 (ΔΙΑΘΕΣΙΜΑ ΧΡΗΜΑΤΑ)
+            const moneyPlirwmi = parseFloat(document.getElementById('money-plirwmi').value) || 0;
+            const moneyMetrita = parseFloat(document.getElementById('money-metrita').value) || 0;
+            const moneyTrapeza = parseFloat(document.getElementById('money-trapeza').value) || 0;
+
+            // F18 = ΠΛΗΡΩΜΗ + ΜΕΤΡΗΤΑ + ΤΡΑΠΕΖΑ
+            const sumF18 = moneyPlirwmi + moneyMetrita + moneyTrapeza;
+
+            document.getElementById('total-f18-badge').innerText = `F18: ${sumF18.toFixed(2)} €`;
+            document.getElementById('sub-f18').innerText = `${sumF18.toFixed(2)} €`;
+
+            // 5. ΤΕΛΙΚΟ ΠΟΣΟ ΤΑΜΕΙΟΥ (H18 = E18 + F18 + I9)
+            const finalTameio = sumE18 + sumF18 + sumI9;
+            const roundedVal = Math.round(finalTameio);
+
+            const displayEl = document.getElementById('display-final-tameio');
+            displayEl.innerText = `${finalTameio.toFixed(2)} €`;
+            displayEl.className = `text-4xl font-black tracking-tight ${finalTameio >= 0 ? 'text-amber-400' : 'text-rose-400'}`;
+
+            document.getElementById('display-final-rounded').innerText = `(~ ${roundedVal} €)`;
+
+            // Save persistent state
+            state = {
+                kinoStr,
+                stoixStr,
+                posStr,
+                toraAmount: toraAmt,
+                skratsTotalG2: sumG2_total,
+                moneyPlirwmi,
+                moneyMetrita,
+                moneyTrapeza
+            };
+            localStorage.setItem('allwyn_excel_state', JSON.stringify(state));
+        }
+
+        function resetDayConfirm() {
+            if (confirm("Θέλετε να καθαρίσετε τα ημερήσια νούμερα μηχανών και διαθεσίμων για νέα ημέρα; (Τα ονόματα πελατών, το πλαίσιο εξαργυρώσεων και το στοκ θα παραμείνουν).")) {
+                document.getElementById('kino-input').value = "";
+                document.getElementById('stoix-input').value = "";
+                document.getElementById('pos-input').value = "";
+                document.getElementById('tora-amount').value = "";
+                document.getElementById('money-plirwmi').value = "";
+                document.getElementById('money-metrita').value = "";
+                document.getElementById('money-trapeza').value = "";
+                calculateAll();
+            }
+        }
+    </script>
+</body>
+</html>
